@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Replyte - Manager</title>
+  <style>
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f7f9fa;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    h1 {
+      margin: 0;
+      color: #0f1419;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 12px;
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    .btn-primary {
+      background: #1d9bf0;
+      color: white;
+    }
+    
+    .btn-secondary {
+      background: #eff3f4;
+      color: #0f1419;
+    }
+    
+    .tabs {
+      display: flex;
+      margin-bottom: 24px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .tab {
+      padding: 12px 24px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      color: #536471;
+    }
+    
+    .tab.active {
+      color: #1d9bf0;
+      border-bottom-color: #1d9bf0;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .search-bar {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #cfd9de;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    
+    .response-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+    
+    .response-card {
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 16px;
+      background: white;
+    }
+    
+    .response-header {
+      display: flex;
+      justify-content: between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .response-title {
+      font-weight: 600;
+      font-size: 16px;
+    }
+    
+    .response-body {
+      color: #536471;
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+    
+    .response-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    
+    .tag {
+      background: #eff3f4;
+      color: #536471;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+    
+    .response-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-small {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+    
+    .modal-content {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      width: 90%;
+      max-width: 500px;
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #cfd9de;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    
+    .form-group textarea {
+      height: 100px;
+      resize: vertical;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Replyte Manager</h1>
+      <div class="actions">
+        <button class="btn btn-secondary" id="import-btn">Import</button>
+        <button class="btn btn-secondary" id="export-btn">Export</button>
+        <button class="btn btn-primary" id="new-response-btn">New Response</button>
+      </div>
+    </div>
+    
+    <div class="tabs">
+      <div class="tab active" data-tab="responses">Responses</div>
+      <div class="tab" data-tab="nicknames">Nicknames</div>
+    </div>
+    
+    <div class="tab-content active" id="responses-tab">
+      <input type="text" class="search-bar" id="response-search" placeholder="Search responses...">
+      <div class="response-grid" id="response-grid"></div>
+    </div>
+    
+    <div class="tab-content" id="nicknames-tab">
+      <input type="text" class="search-bar" id="nickname-search" placeholder="Search nicknames...">
+      <button class="btn btn-primary" id="new-nickname-btn" style="margin-bottom: 16px;">Add Nickname</button>
+      <div id="nickname-list"></div>
+    </div>
+  </div>
+  
+  <!-- Response Modal -->
+  <div class="modal" id="response-modal">
+    <div class="modal-content">
+      <h2 id="response-modal-title">New Response</h2>
+      <form id="response-form">
+        <div class="form-group">
+          <label for="response-title">Title</label>
+          <input type="text" id="response-title" required>
+        </div>
+        <div class="form-group">
+          <label for="response-body">Body</label>
+          <textarea id="response-body" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="response-tags">Tags (comma separated)</label>
+          <input type="text" id="response-tags">
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="response-favorite"> Favorite
+          </label>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn btn-secondary" id="cancel-response">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <input type="file" id="import-file" accept=".json" style="display: none;">
+  
+  <script src="manager.js"></script>
+</body>
+</html>

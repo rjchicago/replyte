@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Replyte - Manager (Test)</title>
+  <style>
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f7f9fa;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    h1 {
+      margin: 0;
+      color: #0f1419;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 12px;
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    .btn-primary {
+      background: #1d9bf0;
+      color: white;
+    }
+    
+    .btn-secondary {
+      background: #eff3f4;
+      color: #0f1419;
+    }
+    
+    .tabs {
+      display: flex;
+      margin-bottom: 24px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .tab {
+      padding: 12px 24px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      color: #536471;
+    }
+    
+    .tab.active {
+      color: #1d9bf0;
+      border-bottom-color: #1d9bf0;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .search-bar {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #cfd9de;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+    
+    .modal-content {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      width: 90%;
+      max-width: 500px;
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    
+    .form-group input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #cfd9de;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Replyte Manager (Test)</h1>
+    </div>
+    
+    <div class="tabs">
+      <div class="tab active" data-tab="nicknames">Nicknames</div>
+    </div>
+    
+    <div class="tab-content active" id="nicknames-tab">
+      <input type="text" class="search-bar" id="nickname-search" placeholder="Search nicknames...">
+      <button class="btn btn-primary" id="new-nickname-btn" style="margin-bottom: 16px;">Add Nickname</button>
+      <div id="nickname-list"></div>
+    </div>
+  </div>
+  
+  <script>
+    class TestManager {
+      constructor() {
+        this.nicknames = { 'testuser': 'TU', 'johndoe': 'JD' };
+        this.init();
+      }
+
+      init() {
+        this.setupEventListeners();
+        this.renderNicknames();
+      }
+
+      setupEventListeners() {
+        document.getElementById('new-nickname-btn').onclick = () => this.showNicknameModal();
+        document.getElementById('nickname-search').oninput = (e) => this.renderNicknames(e.target.value);
+      }
+
+      renderNicknames(filter = '') {
+        const list = document.getElementById('nickname-list');
+        const entries = Object.entries(this.nicknames).filter(([handle, nickname]) => 
+          handle.toLowerCase().includes(filter.toLowerCase()) ||
+          nickname.toLowerCase().includes(filter.toLowerCase())
+        );
+        
+        list.innerHTML = entries.map(([handle, nickname]) => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border: 1px solid #eee; border-radius: 6px; margin-bottom: 8px;">
+            <div>
+              <strong>@${handle}</strong> → ${nickname}
+            </div>
+            <button class="btn btn-secondary" onclick="manager.deleteNickname('${handle}')">Delete</button>
+          </div>
+        `).join('');
+      }
+
+      showNicknameModal() {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.id = 'nickname-modal';
+        modal.innerHTML = `
+          <div class="modal-content">
+            <h2>Add Nickname</h2>
+            <form id="nickname-form">
+              <div class="form-group">
+                <label for="nickname-handle">X Handle (without @)</label>
+                <input type="text" id="nickname-handle" required>
+              </div>
+              <div class="form-group">
+                <label for="nickname-name">Nickname</label>
+                <input type="text" id="nickname-name" required>
+              </div>
+              <div class="actions">
+                <button type="button" class="btn btn-secondary" id="cancel-nickname">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+              </div>
+            </form>
+          </div>
+        `;
+        
+        document.body.appendChild(modal);
+        modal.style.display = 'block';
+        
+        modal.querySelector('#cancel-nickname').onclick = () => modal.remove();
+        modal.querySelector('#nickname-form').onsubmit = (e) => this.saveNickname(e, modal);
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+      }
+
+      saveNickname(e, modal) {
+        e.preventDefault();
+        
+        const handle = document.getElementById('nickname-handle').value.trim();
+        const nickname = document.getElementById('nickname-name').value.trim();
+        
+        if (!handle || !nickname) return;
+        
+        this.nicknames[handle] = nickname;
+        modal.remove();
+        this.renderNicknames();
+      }
+
+      deleteNickname(handle) {
+        if (confirm(`Delete nickname for @${handle}?`)) {
+          delete this.nicknames[handle];
+          this.renderNicknames();
+        }
+      }
+    }
+
+    const manager = new TestManager();
+  </script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 350px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    h1 {
+      font-size: 18px;
+      margin: 0;
+      color: #0f1419;
+    }
+    
+    .manage-btn {
+      background: #1d9bf0;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    
+    .search-box {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #cfd9de;
+      border-radius: 20px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      outline: none;
+    }
+    
+    .favorites {
+      margin-bottom: 16px;
+    }
+    
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #536471;
+    }
+    
+    .response-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .response-item {
+      padding: 8px;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .response-item:hover {
+      background: #f7f9fa;
+    }
+    
+    .response-title {
+      font-weight: 500;
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+    
+    .response-preview {
+      color: #536471;
+      font-size: 12px;
+    }
+    
+    .status {
+      text-align: center;
+      color: #536471;
+      font-size: 12px;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Replyte</h1>
+    <button class="manage-btn" id="manage-btn">Manage</button>
+  </div>
+  
+  <input type="text" class="search-box" id="search" placeholder="Search responses...">
+  
+  <div class="favorites">
+    <div class="section-title">⭐ Favorites</div>
+    <div id="favorites-list"></div>
+  </div>
+  
+  <div class="section-title">All Responses</div>
+  <div class="response-list" id="response-list"></div>
+  
+  <div class="status" id="status">Ready</div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
