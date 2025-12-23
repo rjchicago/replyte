@@ -1,0 +1,6 @@
+{
+  "testEnvironment": "node",
+  "forceExit": true,
+  "detectOpenHandles": false,
+  "testTimeout": 5000
+}

@@ -22,6 +22,11 @@ app.use(express.urlencoded({ extended: true }));
 // Initialize database
 const db = new Database();
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Auth routes
 app.use('/auth', auth);
 
@@ -31,6 +36,8 @@ app.use('/api', apiRoutes(db));
 // Sync routes (with API key auth)
 app.use('/sync', syncRoutes(db));
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+module.exports = app;

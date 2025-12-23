@@ -12,10 +12,14 @@
     "react-scripts": "5.0.1",
     "tailwindcss": "^3.4.0"
   },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  },
   "scripts": {
     "start": "node server.js",
     "build": "react-scripts build",
-    "dev": "BROWSER=none HOST=0.0.0.0 react-scripts start"
+    "dev": "BROWSER=none HOST=0.0.0.0 react-scripts start",
+    "test": "playwright test"
   },
   "browserslist": {
     "production": [
