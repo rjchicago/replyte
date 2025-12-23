@@ -433,32 +433,6 @@ function App() {
             </div>
             {user && (
               <div className="flex items-center space-x-4">
-                <select 
-                  value={spacing} 
-                  onChange={(e) => setSpacing(e.target.value)}
-                  className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                >
-                  <option value="compact">Compact</option>
-                  <option value="normal">Normal</option>
-                  <option value="comfortable">Comfortable</option>
-                </select>
-                <button
-                  onClick={exportData}
-                  disabled={exporting}
-                  className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  {exporting ? 'Exporting...' : 'Export'}
-                </button>
-                <label className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-medium cursor-pointer">
-                  {importing ? 'Importing...' : 'Import'}
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={importData}
-                    disabled={importing}
-                    className="hidden"
-                  />
-                </label>
                 <span className="text-gray-700">{userName || user.email}</span>
                 <a 
                   href="https://tinyauth.localtest.me/logout" 
@@ -861,6 +835,54 @@ function App() {
                         </div>
                         <p className="text-sm text-gray-600">
                           Use this API key in the Chrome extension to sync your handles and templates.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mb-6">
+                      <h2 className="text-lg font-medium text-gray-900 mb-4">Display</h2>
+                      <div className="bg-white p-4 rounded-lg shadow border">
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Spacing:
+                          </label>
+                          <select 
+                            value={spacing} 
+                            onChange={(e) => setSpacing(e.target.value)}
+                            className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                          >
+                            <option value="compact">Compact</option>
+                            <option value="normal">Normal</option>
+                            <option value="comfortable">Comfortable</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mb-6">
+                      <h2 className="text-lg font-medium text-gray-900 mb-4">Data Management</h2>
+                      <div className="bg-white p-4 rounded-lg shadow border">
+                        <div className="flex space-x-4">
+                          <button
+                            onClick={exportData}
+                            disabled={exporting}
+                            className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-4 py-2 rounded-md text-sm font-medium"
+                          >
+                            {exporting ? 'Exporting...' : 'Export Data'}
+                          </button>
+                          <label className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
+                            {importing ? 'Importing...' : 'Import Data'}
+                            <input
+                              type="file"
+                              accept=".json"
+                              onChange={importData}
+                              disabled={importing}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-2">
+                          Export your handles and templates as JSON, or import from a previous export.
                         </p>
                       </div>
                     </div>

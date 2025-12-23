@@ -20,7 +20,7 @@ class ResponseManager {
       const cloudLoaded = await this.loadFromCloud();
       
       if (!cloudLoaded && typeof chrome !== 'undefined' && chrome.storage) {
-        const data = await chrome.storage.sync.get(['responses', 'users', 'nicknames', 'settings']);
+        const data = await chrome.storage.local.get(['responses', 'users', 'nicknames', 'settings']);
         this.responses = data.responses || [];
         this.users = data.users || {};
         this.settings = { ...this.settings, ...data.settings };
@@ -28,7 +28,7 @@ class ResponseManager {
         if (data.nicknames && !data.users) {
           this.users = Object.fromEntries(
             Object.entries(data.nicknames).map(([handle, nickname]) => 
-              [handle, { nickname, emojis: [] }]
+              [handle, { nickname, emojis: '' }]
             )
           );
         }
@@ -38,7 +38,7 @@ class ResponseManager {
           { id: '1', title: 'Supportive', body: 'This is amazing, {{nickname}}! 🙌', tags: ['uplift'], favorite: true, createdAt: Date.now(), updatedAt: Date.now() },
           { id: '2', title: 'Question', body: 'Great point {{nickname}}! What made you think of this?', tags: ['question'], favorite: false, createdAt: Date.now(), updatedAt: Date.now() }
         ];
-        this.users = { 'testuser': { nickname: 'TU', emojis: [] }, 'johndoe': { nickname: 'JD', emojis: [] } };
+        this.users = { 'testuser': { nickname: 'TU', emojis: '' }, 'johndoe': { nickname: 'JD', emojis: '' } };
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -48,7 +48,7 @@ class ResponseManager {
   async saveData() {
     try {
       if (typeof chrome !== 'undefined' && chrome.storage) {
-        await chrome.storage.sync.set({
+        await chrome.storage.local.set({
           responses: this.responses,
           users: this.users,
           settings: this.settings
@@ -68,11 +68,10 @@ class ResponseManager {
   async syncToCloud() {
     try {
       if (!this.settings.apiKey) {
-        console.log('No API key configured');
-        return;
+        throw new Error('No API key configured');
       }
       
-      await fetch(`${this.settings.serverUrl}/sync/data`, {
+      const response = await fetch(`${this.settings.serverUrl}/sync/data`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,8 +82,15 @@ class ResponseManager {
           templates: this.responses
         })
       });
+      
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status} ${response.statusText}`);
+      }
+      
+      return true;
     } catch (error) {
-      console.log('Cloud sync failed:', error.message);
+      console.error('Cloud sync failed:', error);
+      throw error;
     }
   }
 
@@ -151,6 +157,7 @@ class ResponseManager {
     document.getElementById('import-btn').onclick = () => document.getElementById('import-file').click();
     document.getElementById('export-btn').onclick = () => this.exportData();
     document.getElementById('import-file').onchange = (e) => this.importData(e);
+    document.getElementById('cloud-sync-btn').onclick = () => this.cloudSync();
     
     // Settings
     document.getElementById('save-settings').onclick = () => this.saveSettings();
@@ -243,7 +250,7 @@ class ResponseManager {
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border: 1px solid #eee; border-radius: 6px; margin-bottom: 8px;">
         <div>
           <strong>@${handle}</strong> → ${user.nickname}
-          ${user.emojis.length > 0 ? `<span style="margin-left: 8px;">${user.emojis.join(' ')}</span>` : ''}
+          ${user.emojis ? `<span style="margin-left: 8px;">${user.emojis}</span>` : ''}
         </div>
         <div>
           <button class="btn btn-secondary btn-small" data-action="edit-nickname" data-handle="${handle}" style="margin-right: 8px;">Edit</button>
@@ -282,8 +289,8 @@ class ResponseManager {
             <input type="text" id="nickname-name" required value="${user ? user.nickname : ''}">
           </div>
           <div class="form-group">
-            <label for="nickname-emojis">Emojis (space separated)</label>
-            <input type="text" id="nickname-emojis" placeholder="🎨 🚀 💡" value="${user ? user.emojis.join(' ') : ''}">
+            <label for="nickname-emojis">Emojis</label>
+            <input type="text" id="nickname-emojis" placeholder="🎨🚀💡" value="${user ? (user.emojis || '') : ''}">
           </div>
           <div class="actions">
             <button type="button" class="btn btn-secondary" id="cancel-nickname">Cancel</button>
@@ -308,8 +315,7 @@ class ResponseManager {
     
     let handle = document.getElementById('nickname-handle').value.trim();
     const nickname = document.getElementById('nickname-name').value.trim();
-    const emojisInput = document.getElementById('nickname-emojis').value.trim();
-    const emojis = emojisInput ? emojisInput.split(/\s+/).filter(e => e) : [];
+    const emojis = document.getElementById('nickname-emojis').value.trim();
     
     if (!handle || !nickname) return;
     
@@ -461,7 +467,7 @@ class ResponseManager {
         // Migrate old format
         this.users = Object.fromEntries(
           Object.entries(data.nicknames).map(([handle, nickname]) => 
-            [handle, { nickname, emojis: [] }]
+            [handle, { nickname, emojis: '' }]
           )
         );
       }
@@ -521,6 +527,63 @@ class ResponseManager {
     } catch (error) {
       resultSpan.textContent = `❌ Connection failed: ${error.message}`;
       resultSpan.style.color = '#dc2626';
+    }
+  }
+  
+  async cloudSync() {
+    if (!this.settings.serverUrl || !this.settings.apiKey) {
+      alert('Please configure Server URL and API Key first');
+      return;
+    }
+    
+    const syncBtn = document.getElementById('cloud-sync-btn');
+    const originalText = syncBtn.textContent;
+    
+    // Backup current local data
+    const localBackup = {
+      responses: [...this.responses],
+      users: { ...this.users }
+    };
+    
+    try {
+      // Step 1: Sync local to cloud
+      syncBtn.textContent = 'Uploading to cloud...';
+      syncBtn.disabled = true;
+      
+      await this.syncToCloud();
+      
+      // Step 2: Sync cloud to local (replace local)
+      syncBtn.textContent = 'Downloading from cloud...';
+      
+      const success = await this.loadFromCloud();
+      if (!success) {
+        throw new Error('Failed to download data from cloud');
+      }
+      
+      // Save the cloud data to local storage
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        await chrome.storage.local.set({
+          responses: this.responses,
+          users: this.users,
+          settings: this.settings
+        });
+      }
+      
+      this.render();
+      alert('Cloud sync completed successfully!');
+      
+    } catch (error) {
+      console.error('Cloud sync failed:', error);
+      
+      // Restore local data from backup
+      this.responses = localBackup.responses;
+      this.users = localBackup.users;
+      this.render();
+      
+      alert(`Cloud sync failed: ${error.message}\n\nYour local data has been preserved.`);
+    } finally {
+      syncBtn.textContent = originalText;
+      syncBtn.disabled = false;
     }
   }
 }
