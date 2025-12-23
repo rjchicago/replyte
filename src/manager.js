@@ -158,6 +158,7 @@ class ResponseManager {
     document.getElementById('export-btn').onclick = () => this.exportData();
     document.getElementById('import-file').onchange = (e) => this.importData(e);
     document.getElementById('cloud-sync-btn').onclick = () => this.cloudSync();
+    document.getElementById('replace-from-server-btn').onclick = () => this.replaceFromServer();
     
     // Settings
     document.getElementById('save-settings').onclick = () => this.saveSettings();
@@ -494,6 +495,15 @@ class ResponseManager {
     this.settings.apiKey = document.getElementById('api-key').value.trim();
     
     await this.saveData();
+    
+    // Also send to background script for content script access
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      chrome.runtime.sendMessage({
+        type: 'SAVE_SETTINGS',
+        settings: this.settings
+      });
+    }
+    
     alert('Settings saved!');
   }
   
@@ -539,28 +549,47 @@ class ResponseManager {
     const syncBtn = document.getElementById('cloud-sync-btn');
     const originalText = syncBtn.textContent;
     
-    // Backup current local data
-    const localBackup = {
-      responses: [...this.responses],
-      users: { ...this.users }
-    };
-    
     try {
-      // Step 1: Sync local to cloud
-      syncBtn.textContent = 'Uploading to cloud...';
+      syncBtn.textContent = 'Syncing to cloud...';
       syncBtn.disabled = true;
       
+      // Only upload local data to cloud, don't download and replace
       await this.syncToCloud();
       
-      // Step 2: Sync cloud to local (replace local)
-      syncBtn.textContent = 'Downloading from cloud...';
+      alert('Local data synced to cloud successfully!');
+      
+    } catch (error) {
+      console.error('Cloud sync failed:', error);
+      alert(`Cloud sync failed: ${error.message}`);
+    } finally {
+      syncBtn.textContent = originalText;
+      syncBtn.disabled = false;
+    }
+  }
+  
+  async replaceFromServer() {
+    if (!this.settings.serverUrl || !this.settings.apiKey) {
+      alert('Please configure Server URL and API Key first');
+      return;
+    }
+    
+    if (!confirm('This will replace ALL local data with server data. Are you sure?')) {
+      return;
+    }
+    
+    const replaceBtn = document.getElementById('replace-from-server-btn');
+    const originalText = replaceBtn.textContent;
+    
+    try {
+      replaceBtn.textContent = 'Downloading...';
+      replaceBtn.disabled = true;
       
       const success = await this.loadFromCloud();
       if (!success) {
-        throw new Error('Failed to download data from cloud');
+        throw new Error('Failed to download data from server');
       }
       
-      // Save the cloud data to local storage
+      // Save the server data to local storage
       if (typeof chrome !== 'undefined' && chrome.storage) {
         await chrome.storage.local.set({
           responses: this.responses,
@@ -570,20 +599,14 @@ class ResponseManager {
       }
       
       this.render();
-      alert('Cloud sync completed successfully!');
+      alert('Local data replaced with server data successfully!');
       
     } catch (error) {
-      console.error('Cloud sync failed:', error);
-      
-      // Restore local data from backup
-      this.responses = localBackup.responses;
-      this.users = localBackup.users;
-      this.render();
-      
-      alert(`Cloud sync failed: ${error.message}\n\nYour local data has been preserved.`);
+      console.error('Replace from server failed:', error);
+      alert(`Replace failed: ${error.message}`);
     } finally {
-      syncBtn.textContent = originalText;
-      syncBtn.disabled = false;
+      replaceBtn.textContent = originalText;
+      replaceBtn.disabled = false;
     }
   }
 }

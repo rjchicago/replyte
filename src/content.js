@@ -22,7 +22,7 @@ class XReplyHelper {
     if (data.nicknames && !data.users) {
       this.users = Object.fromEntries(
         Object.entries(data.nicknames).map(([handle, nickname]) => 
-          [handle, { nickname, emojis: [] }]
+          [handle, { nickname, emojis: '' }]
         )
       );
     }
@@ -127,7 +127,7 @@ class XReplyHelper {
   showNicknameModal(handle) {
     const context = this.getCurrentTweetContext();
     const defaultNickname = context.displayName ? context.displayName.split(' ')[0] : '';
-    const user = this.users[handle] || { nickname: defaultNickname, emojis: [] };
+    const user = this.users[handle] || { nickname: defaultNickname, emojis: '' };
     const currentNickname = user.nickname;
     
     const modal = document.createElement('div');
@@ -140,7 +140,7 @@ class XReplyHelper {
         </div>
         <div class="x-nickname-form">
           <input type="text" id="nickname-input" value="${currentNickname}" placeholder="Enter nickname" maxlength="20">
-          <input type="text" id="emojis-input" value="${user.emojis.join(' ')}" placeholder="Emojis (space separated)" style="margin-top: 8px;">
+          <input type="text" id="emojis-input" value="${user.emojis || ''}" placeholder="Emojis" style="margin-top: 8px;">
           <div class="x-nickname-buttons">
             <button id="save-nickname" class="x-reply-btn">Save</button>
             <button id="cancel-nickname" class="x-reply-btn">Cancel</button>
@@ -162,8 +162,7 @@ class XReplyHelper {
     
     modal.querySelector('#save-nickname').onclick = async () => {
       const nickname = input.value.trim();
-      const emojisInput = modal.querySelector('#emojis-input').value.trim();
-      const emojis = emojisInput ? emojisInput.split(/\s+/).filter(e => e) : [];
+      const emojis = modal.querySelector('#emojis-input').value.trim();
       await this.saveNickname(handle, nickname, emojis);
       modal.remove();
       // Update button text
@@ -178,7 +177,7 @@ class XReplyHelper {
     };
   }
 
-  async saveNickname(handle, nickname, emojis = []) {
+  async saveNickname(handle, nickname, emojis = '') {
     if (nickname) {
       this.users[handle] = { nickname, emojis };
     } else {
@@ -276,7 +275,7 @@ class XReplyHelper {
   }
 
   async insertResponse(responseId) {
-    const response = this.responses.find(r => r.id === responseId);
+    const response = this.responses.find(r => String(r.id) === String(responseId));
     if (!response) return;
 
     const composer = this.findComposer();
@@ -315,7 +314,6 @@ class XReplyHelper {
     // Get nickname
     const nickname = handle ? this.users[handle]?.nickname : '';
     
-    console.log('Current tweet context:', { handle, displayName, nickname });
     return { handle, displayName, nickname };
   }
 
@@ -357,7 +355,7 @@ class XReplyHelper {
 
   processTemplate(text, context) {
     const user = context.handle ? this.users[context.handle] : null;
-    const emojis = user?.emojis?.length > 0 ? user.emojis.join('') : '';
+    const emojis = user?.emojis || '';
     
     return text
       .replace(/{{nickname}}/g, context.nickname || context.handle || 'User')

@@ -1,7 +1,7 @@
 // Background service worker
 chrome.runtime.onInstalled.addListener(async () => {
   // Initialize default data
-  const { responses, users, nicknames, settings } = await chrome.storage.sync.get(['responses', 'users', 'nicknames', 'settings']);
+  const { responses, users, nicknames, settings } = await chrome.storage.local.get(['responses', 'users', 'nicknames', 'settings']);
   
   if (!responses) {
     const defaultResponses = [
@@ -25,7 +25,7 @@ chrome.runtime.onInstalled.addListener(async () => {
       }
     ];
     
-    await chrome.storage.sync.set({ responses: defaultResponses });
+    await chrome.storage.local.set({ responses: defaultResponses });
   }
   
   if (!users) {
@@ -33,19 +33,19 @@ chrome.runtime.onInstalled.addListener(async () => {
     if (nicknames && Object.keys(nicknames).length > 0) {
       const migratedUsers = Object.fromEntries(
         Object.entries(nicknames).map(([handle, nickname]) => 
-          [handle, { nickname, emojis: [] }]
+          [handle, { nickname, emojis: '' }]
         )
       );
-      await chrome.storage.sync.set({ users: migratedUsers });
+      await chrome.storage.local.set({ users: migratedUsers });
     } else {
-      await chrome.storage.sync.set({ 
-        users: { 'rjchicago': { nickname: 'RJ', emojis: [] } }
+      await chrome.storage.local.set({ 
+        users: { 'rjchicago': { nickname: 'RJ', emojis: '' } }
       });
     }
   }
   
   if (!settings) {
-    await chrome.storage.sync.set({ 
+    await chrome.storage.local.set({ 
       settings: {
         favoritesCount: 5,
         serverUrl: '',
@@ -58,13 +58,13 @@ chrome.runtime.onInstalled.addListener(async () => {
 // Handle messages from content script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'GET_DATA') {
-    chrome.storage.sync.get(['responses', 'users', 'nicknames', 'settings'])
+    chrome.storage.local.get(['responses', 'users', 'nicknames', 'settings'])
       .then(data => {
         // Migrate old nicknames format if needed
         if (data.nicknames && !data.users) {
           data.users = Object.fromEntries(
             Object.entries(data.nicknames).map(([handle, nickname]) => 
-              [handle, { nickname, emojis: [] }]
+              [handle, { nickname, emojis: '' }]
             )
           );
         }
@@ -74,19 +74,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   
   if (request.type === 'SAVE_DATA') {
-    chrome.storage.sync.set(request.data)
+    chrome.storage.local.set(request.data)
       .then(() => sendResponse({ success: true }));
     return true;
   }
   
   if (request.type === 'SAVE_USERS') {
-    chrome.storage.sync.set({ users: request.users })
+    chrome.storage.local.set({ users: request.users })
       .then(() => sendResponse({ success: true }));
     return true;
   }
   
   if (request.type === 'SAVE_SETTINGS') {
-    chrome.storage.sync.set({ settings: request.settings })
+    chrome.storage.local.set({ settings: request.settings })
       .then(() => sendResponse({ success: true }));
     return true;
   }
@@ -95,10 +95,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'SAVE_NICKNAMES') {
     const users = Object.fromEntries(
       Object.entries(request.nicknames).map(([handle, nickname]) => 
-        [handle, { nickname, emojis: [] }]
+        [handle, { nickname, emojis: '' }]
       )
     );
-    chrome.storage.sync.set({ users })
+    chrome.storage.local.set({ users })
       .then(() => sendResponse({ success: true }));
     return true;
   }
