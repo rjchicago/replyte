@@ -89,11 +89,32 @@ services:
         condition: service_healthy
     labels:
       traefik.enable: true
-      traefik.http.routers.server.rule: Host(`replyte.localtest.me`) && PathPrefix(`/api`)
-      traefik.http.routers.server.entrypoints: websecure
-      traefik.http.routers.server.tls: true
-      traefik.http.routers.server.middlewares: tinyauth@docker
-      traefik.http.services.server.loadbalancer.server.port: 3000
+      
+      # Auth routes (no middleware)
+      traefik.http.routers.server-auth.rule: Host(`replyte.localtest.me`) && PathPrefix(`/auth`)
+      traefik.http.routers.server-auth.entrypoints: websecure
+      traefik.http.routers.server-auth.tls: true
+      traefik.http.routers.server-auth.middlewares: ""
+      traefik.http.routers.server-auth.service: server-service
+      traefik.http.routers.server-auth.priority: 100
+      
+      # API routes (with TinyAuth)
+      traefik.http.routers.server-api.rule: Host(`replyte.localtest.me`) && PathPrefix(`/api`)
+      traefik.http.routers.server-api.entrypoints: websecure
+      traefik.http.routers.server-api.tls: true
+      traefik.http.routers.server-api.middlewares: tinyauth@docker
+      traefik.http.routers.server-api.service: server-service
+      traefik.http.routers.server-api.priority: 50
+      
+      # Sync routes (no auth - API key based)
+      traefik.http.routers.server-sync.rule: Host(`replyte.localtest.me`) && PathPrefix(`/sync`)
+      traefik.http.routers.server-sync.entrypoints: websecure
+      traefik.http.routers.server-sync.tls: true
+      traefik.http.routers.server-sync.middlewares: ""
+      traefik.http.routers.server-sync.service: server-service
+      traefik.http.routers.server-sync.priority: 75
+      
+      traefik.http.services.server-service.loadbalancer.server.port: 3000
     stdin_open: true
     tty: true
 

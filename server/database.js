@@ -16,6 +16,10 @@ class Database {
     return await this.db('users').where({ email }).first();
   }
 
+  async getUserByApiKey(apiKey) {
+    return await this.db('users').where({ api_key: apiKey }).first();
+  }
+
   async getUser(id) {
     return await this.db('users').where({ id }).first();
   }
@@ -96,6 +100,11 @@ class Database {
       console.error('Error in upsertTemplate:', error.message, { userId, title, body: body?.substring(0, 20) });
       return null;
     }
+  }
+  async generateApiKey(userId) {
+    const apiKey = 'rpl_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    await this.db('users').where({ id: userId }).update({ api_key: apiKey });
+    return apiKey;
   }
 }
 

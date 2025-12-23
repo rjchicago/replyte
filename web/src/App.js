@@ -23,6 +23,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState(null);
   const [activeTab, setActiveTab] = useState('handles');
+  const [apiKey, setApiKey] = useState(null);
   const [handles, setHandles] = useState([]);
   const [filteredHandles, setFilteredHandles] = useState([]);
   const [handleSearch, setHandleSearch] = useState('');
@@ -67,7 +68,7 @@ function App() {
   
   const refreshPreview = (templateId) => {
     let template;
-    if (templateId.startsWith('edit-')) {
+    if (String(templateId).startsWith('edit-')) {
       template = editingTemplate;
     } else {
       template = templates.find(t => t.id === templateId);
@@ -109,6 +110,7 @@ function App() {
         const userData = await res.json();
         setUser(userData);
         setUserName(userData?.name || userData?.email);
+        setApiKey(userData?.apiKey);
       } else {
         console.error('API error:', res.status, res.statusText);
       }
@@ -161,6 +163,26 @@ function App() {
       // Silently ignore debug endpoint errors
       console.log('Debug headers not available');
     }
+  };
+
+  const generateApiKey = async () => {
+    try {
+      const res = await fetch('/api/user/generate-api-key', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setApiKey(data.apiKey);
+      }
+    } catch (error) {
+      console.error('Failed to generate API key:', error);
+    }
+  };
+
+  const copyApiKey = () => {
+    navigator.clipboard.writeText(apiKey);
+    alert('API key copied to clipboard!');
   };
 
   const addTemplate = async (e) => {
@@ -478,6 +500,16 @@ function App() {
                   >
                     Templates
                   </button>
+                  <button 
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'settings' 
+                        ? 'border-blue-500 text-blue-600' 
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                    onClick={() => setActiveTab('settings')}
+                  >
+                    Settings
+                  </button>
                 </nav>
               </div>
 
@@ -647,6 +679,24 @@ function App() {
                               className="w-full border border-gray-300 rounded-md px-3 py-2 h-24"
                               required
                             />
+                            {newTemplate.body && (
+                              <div className="p-2 bg-gray-50 rounded border-l-4 border-blue-200">
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-xs font-medium text-gray-500">Preview:</span>
+                                  <button 
+                                    type="button"
+                                    onClick={() => setTemplatePreviews(prev => ({ ...prev, 'new-template': renderTemplate(newTemplate) }))}
+                                    className="p-1 rounded hover:bg-gray-200 text-gray-500"
+                                    title="Refresh preview"
+                                  >
+                                    <RefreshIcon className="h-3 w-3" />
+                                  </button>
+                                </div>
+                                <p className={`text-gray-700 ${spacing === 'compact' ? 'text-xs' : 'text-sm'}`}>
+                                  {templatePreviews['new-template'] || renderTemplate(newTemplate)}
+                                </p>
+                              </div>
+                            )}
                             <label className="flex items-center">
                               <input
                                 type="checkbox"
@@ -772,6 +822,47 @@ function App() {
                           )}
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'settings' && (
+                  <div>
+                    <div className="mb-6">
+                      <h2 className="text-lg font-medium text-gray-900 mb-4">Chrome Extension</h2>
+                      <div className="bg-white p-4 rounded-lg shadow border">
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            API Key for Chrome Extension:
+                          </label>
+                          {apiKey ? (
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="text"
+                                value={apiKey}
+                                readOnly
+                                className="flex-1 border border-gray-300 rounded-md px-3 py-2 bg-gray-50 font-mono text-sm"
+                              />
+                              <button
+                                onClick={copyApiKey}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm"
+                              >
+                                Copy
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={generateApiKey}
+                              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm"
+                            >
+                              Generate API Key
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Use this API key in the Chrome extension to sync your handles and templates.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 )}

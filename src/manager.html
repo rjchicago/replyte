@@ -241,14 +241,29 @@
         
         <div class="form-group">
           <label for="server-url">Server URL</label>
-          <input type="url" id="server-url" placeholder="https://api.example.com" style="width: 100%;">
+          <input type="url" id="server-url" placeholder="https://replyte.localtest.me" style="width: 100%;">
           <small style="color: #536471; display: block; margin-top: 4px;">Cloud storage server URL (leave empty for local storage only)</small>
         </div>
         
-        <div class="form-group">
-          <label for="account-email">Account</label>
-          <input type="email" id="account-email" placeholder="your@email.com" style="width: 100%;" readonly>
-          <small style="color: #536471; display: block; margin-top: 4px;">Account for cloud sync (login coming soon)</small>
+        <div class="form-group" style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px;">
+          <h4 style="margin-bottom: 16px;">Authentication</h4>
+          
+          <div class="form-group">
+            <label for="account-email">Account</label>
+            <input type="email" id="account-email" placeholder="your@email.com" style="width: 100%;">
+            <small style="color: #536471; display: block; margin-top: 4px;">Account for cloud sync</small>
+          </div>
+          
+          <div class="form-group">
+            <label for="api-key">API Key</label>
+            <input type="password" id="api-key" placeholder="rpl_xxxxxxxxxx" style="width: 100%;">
+            <small style="color: #536471; display: block; margin-top: 4px;">Get your API key from the web app Settings tab</small>
+          </div>
+          
+          <div style="margin-top: 12px;">
+            <button class="btn btn-secondary" id="test-auth">Test Connection</button>
+            <span id="test-result" style="margin-left: 12px; font-size: 14px;"></span>
+          </div>
         </div>
         
         <div class="form-group" style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px;">

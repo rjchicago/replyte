@@ -2,7 +2,7 @@ class ResponseManager {
   constructor() {
     this.responses = [];
     this.users = {};
-    this.settings = { favoritesCount: 5, serverUrl: '', accountEmail: '' };
+    this.settings = { favoritesCount: 5, serverUrl: '', accountEmail: '', apiKey: '' };
     this.currentResponse = null;
     this.init();
   }
@@ -67,19 +67,20 @@ class ResponseManager {
 
   async syncToCloud() {
     try {
-      const token = await this.getAuthToken();
-      if (!token) return;
+      if (!this.settings.apiKey) {
+        console.log('No API key configured');
+        return;
+      }
       
-      await fetch('http://localhost:3000/api/sync/data', {
+      await fetch(`${this.settings.serverUrl}/sync/data`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'X-API-Key': this.settings.apiKey
         },
         body: JSON.stringify({
           handles: Object.entries(this.users).map(([handle, data]) => ({ handle, ...data })),
-          templates: this.responses,
-          settings: this.settings
+          templates: this.responses
         })
       });
     } catch (error) {
@@ -89,11 +90,13 @@ class ResponseManager {
 
   async loadFromCloud() {
     try {
-      const token = await this.getAuthToken();
-      if (!token) return false;
+      if (!this.settings.apiKey) {
+        console.log('No API key configured');
+        return false;
+      }
       
-      const response = await fetch('http://localhost:3000/api/sync/data', {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const response = await fetch(`${this.settings.serverUrl}/sync/data`, {
+        headers: { 'X-API-Key': this.settings.apiKey }
       });
       
       if (response.ok) {
@@ -151,6 +154,7 @@ class ResponseManager {
     
     // Settings
     document.getElementById('save-settings').onclick = () => this.saveSettings();
+    document.getElementById('test-auth').onclick = () => this.testConnection();
 
     // Modal close on background click
     document.getElementById('response-modal').onclick = (e) => {
@@ -474,15 +478,50 @@ class ResponseManager {
     document.getElementById('favorites-count').value = this.settings.favoritesCount || 5;
     document.getElementById('server-url').value = this.settings.serverUrl || '';
     document.getElementById('account-email').value = this.settings.accountEmail || '';
+    document.getElementById('api-key').value = this.settings.apiKey || '';
   }
   
   async saveSettings() {
     this.settings.favoritesCount = parseInt(document.getElementById('favorites-count').value) || 5;
     this.settings.serverUrl = document.getElementById('server-url').value.trim();
     this.settings.accountEmail = document.getElementById('account-email').value.trim();
+    this.settings.apiKey = document.getElementById('api-key').value.trim();
     
     await this.saveData();
     alert('Settings saved!');
+  }
+  
+  async testConnection() {
+    const serverUrl = document.getElementById('server-url').value.trim();
+    const apiKey = document.getElementById('api-key').value.trim();
+    const resultSpan = document.getElementById('test-result');
+    
+    if (!serverUrl || !apiKey) {
+      resultSpan.textContent = '❌ Server URL and API Key required';
+      resultSpan.style.color = '#dc2626';
+      return;
+    }
+    
+    resultSpan.textContent = '⏳ Testing...';
+    resultSpan.style.color = '#6b7280';
+    
+    try {
+      const response = await fetch(`${serverUrl}/sync/test`, {
+        headers: { 'X-API-Key': apiKey }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        resultSpan.textContent = `✅ Connected as ${data.user}`;
+        resultSpan.style.color = '#16a34a';
+      } else {
+        resultSpan.textContent = `❌ ${response.status}: ${response.statusText}`;
+        resultSpan.style.color = '#dc2626';
+      }
+    } catch (error) {
+      resultSpan.textContent = `❌ Connection failed: ${error.message}`;
+      resultSpan.style.color = '#dc2626';
+    }
   }
 }
 
