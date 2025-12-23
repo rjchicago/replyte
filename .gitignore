@@ -22,6 +22,20 @@ Thumbs.db
 # Environment files
 .env
 .env.local
+tinyauth/.env
+
+# SSL certificates
+certs/
+*.pem
+*.key
+*.crt
+
+# Database
+*.db
+*.sqlite
+
+# Docker volumes
+postgres_data/
 
 # Temporary files
 *.tmp

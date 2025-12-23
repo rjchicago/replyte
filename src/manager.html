@@ -197,6 +197,10 @@
       height: 100px;
       resize: vertical;
     }
+    
+    .form-group small {
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -204,8 +208,6 @@
     <div class="header">
       <h1>Replyte Manager</h1>
       <div class="actions">
-        <button class="btn btn-secondary" id="import-btn">Import</button>
-        <button class="btn btn-secondary" id="export-btn">Export</button>
         <button class="btn btn-primary" id="new-response-btn">New Response</button>
       </div>
     </div>
@@ -213,6 +215,7 @@
     <div class="tabs">
       <div class="tab active" data-tab="responses">Responses</div>
       <div class="tab" data-tab="nicknames">Nicknames</div>
+      <div class="tab" data-tab="settings">Settings</div>
     </div>
     
     <div class="tab-content active" id="responses-tab">
@@ -224,6 +227,43 @@
       <input type="text" class="search-bar" id="nickname-search" placeholder="Search nicknames...">
       <button class="btn btn-primary" id="new-nickname-btn" style="margin-bottom: 16px;">Add Nickname</button>
       <div id="nickname-list"></div>
+    </div>
+    
+    <div class="tab-content" id="settings-tab">
+      <div style="max-width: 600px;">
+        <h3 style="margin-bottom: 20px;">Settings</h3>
+        
+        <div class="form-group">
+          <label for="favorites-count">Number of favorites to display</label>
+          <input type="number" id="favorites-count" min="1" max="10" value="5" style="width: 80px;">
+          <small style="color: #536471; display: block; margin-top: 4px;">How many favorite responses to show in the quick menu (1-10)</small>
+        </div>
+        
+        <div class="form-group">
+          <label for="server-url">Server URL</label>
+          <input type="url" id="server-url" placeholder="https://api.example.com" style="width: 100%;">
+          <small style="color: #536471; display: block; margin-top: 4px;">Cloud storage server URL (leave empty for local storage only)</small>
+        </div>
+        
+        <div class="form-group">
+          <label for="account-email">Account</label>
+          <input type="email" id="account-email" placeholder="your@email.com" style="width: 100%;" readonly>
+          <small style="color: #536471; display: block; margin-top: 4px;">Account for cloud sync (login coming soon)</small>
+        </div>
+        
+        <div class="form-group" style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px;">
+          <h4 style="margin-bottom: 16px;">Data Management</h4>
+          <div style="display: flex; gap: 12px;">
+            <button class="btn btn-secondary" id="import-btn">Import Data</button>
+            <button class="btn btn-secondary" id="export-btn">Export Data</button>
+          </div>
+          <small style="color: #536471; display: block; margin-top: 8px;">Import/export your responses and nicknames as JSON</small>
+        </div>
+        
+        <div style="margin-top: 30px;">
+          <button class="btn btn-primary" id="save-settings">Save Settings</button>
+        </div>
+      </div>
     </div>
   </div>
   

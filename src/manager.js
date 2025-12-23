@@ -2,6 +2,7 @@ class ResponseManager {
   constructor() {
     this.responses = [];
     this.users = {};
+    this.settings = { favoritesCount: 5, serverUrl: '', accountEmail: '' };
     this.currentResponse = null;
     this.init();
   }
@@ -10,14 +11,19 @@ class ResponseManager {
     await this.loadData();
     this.setupEventListeners();
     this.render();
+    this.loadSettings();
   }
 
   async loadData() {
     try {
-      if (typeof chrome !== 'undefined' && chrome.storage) {
-        const data = await chrome.storage.sync.get(['responses', 'users', 'nicknames']);
+      // Try loading from cloud first
+      const cloudLoaded = await this.loadFromCloud();
+      
+      if (!cloudLoaded && typeof chrome !== 'undefined' && chrome.storage) {
+        const data = await chrome.storage.sync.get(['responses', 'users', 'nicknames', 'settings']);
         this.responses = data.responses || [];
         this.users = data.users || {};
+        this.settings = { ...this.settings, ...data.settings };
         // Migrate old nicknames format if present
         if (data.nicknames && !data.users) {
           this.users = Object.fromEntries(
@@ -26,7 +32,7 @@ class ResponseManager {
             )
           );
         }
-      } else {
+      } else if (!cloudLoaded) {
         // Fallback for testing without Chrome extension
         this.responses = [
           { id: '1', title: 'Supportive', body: 'This is amazing, {{nickname}}! 🙌', tags: ['uplift'], favorite: true, createdAt: Date.now(), updatedAt: Date.now() },
@@ -44,8 +50,12 @@ class ResponseManager {
       if (typeof chrome !== 'undefined' && chrome.storage) {
         await chrome.storage.sync.set({
           responses: this.responses,
-          users: this.users
+          users: this.users,
+          settings: this.settings
         });
+        
+        // Sync to cloud if user is logged in
+        await this.syncToCloud();
       } else {
         // Fallback for testing - just log
         console.log('Data saved (test mode):', { responses: this.responses, users: this.users });
@@ -53,6 +63,61 @@ class ResponseManager {
     } catch (error) {
       console.error('Failed to save data:', error);
     }
+  }
+
+  async syncToCloud() {
+    try {
+      const token = await this.getAuthToken();
+      if (!token) return;
+      
+      await fetch('http://localhost:3000/api/sync/data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          handles: Object.entries(this.users).map(([handle, data]) => ({ handle, ...data })),
+          templates: this.responses,
+          settings: this.settings
+        })
+      });
+    } catch (error) {
+      console.log('Cloud sync failed:', error.message);
+    }
+  }
+
+  async loadFromCloud() {
+    try {
+      const token = await this.getAuthToken();
+      if (!token) return false;
+      
+      const response = await fetch('http://localhost:3000/api/sync/data', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        this.responses = data.templates || [];
+        this.users = data.handles.reduce((acc, h) => {
+          const { handle, ...userData } = h;
+          acc[handle] = userData;
+          return acc;
+        }, {});
+        return true;
+      }
+    } catch (error) {
+      console.log('Cloud load failed:', error.message);
+    }
+    return false;
+  }
+
+  async getAuthToken() {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      const data = await chrome.storage.local.get(['authToken']);
+      return data.authToken;
+    }
+    return null;
   }
 
   setupEventListeners() {
@@ -83,6 +148,9 @@ class ResponseManager {
     document.getElementById('import-btn').onclick = () => document.getElementById('import-file').click();
     document.getElementById('export-btn').onclick = () => this.exportData();
     document.getElementById('import-file').onchange = (e) => this.importData(e);
+    
+    // Settings
+    document.getElementById('save-settings').onclick = () => this.saveSettings();
 
     // Modal close on background click
     document.getElementById('response-modal').onclick = (e) => {
@@ -101,6 +169,7 @@ class ResponseManager {
   render() {
     this.renderResponses();
     this.renderUsers();
+    this.loadSettings();
   }
 
   renderResponses(filter = '') {
@@ -399,6 +468,21 @@ class ResponseManager {
     } catch (error) {
       alert('Failed to import data. Please check the file format.');
     }
+  }
+  
+  loadSettings() {
+    document.getElementById('favorites-count').value = this.settings.favoritesCount || 5;
+    document.getElementById('server-url').value = this.settings.serverUrl || '';
+    document.getElementById('account-email').value = this.settings.accountEmail || '';
+  }
+  
+  async saveSettings() {
+    this.settings.favoritesCount = parseInt(document.getElementById('favorites-count').value) || 5;
+    this.settings.serverUrl = document.getElementById('server-url').value.trim();
+    this.settings.accountEmail = document.getElementById('account-email').value.trim();
+    
+    await this.saveData();
+    alert('Settings saved!');
   }
 }
 

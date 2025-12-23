@@ -26,7 +26,7 @@ class XReplyHelper {
         )
       );
     }
-    this.settings = data.settings || {};
+    this.settings = { favoritesCount: 5, serverUrl: '', accountEmail: '', ...data.settings };
   }
 
   injectUI() {
@@ -415,7 +415,8 @@ class XReplyHelper {
     }
     
     const context = this.getCurrentTweetContext();
-    const favorites = this.responses.filter(r => r.favorite).slice(0, 5);
+    const favoritesCount = this.settings.favoritesCount || 5;
+    const favorites = this.responses.filter(r => r.favorite).slice(0, favoritesCount);
     
     const modal = document.createElement('div');
     modal.id = 'x-inline-modal';
@@ -425,7 +426,7 @@ class XReplyHelper {
       `<button class="x-inline-response-btn" data-id="${response.id}">${response.title}</button>`
     ).join('');
     
-    const moreButton = this.responses.length > 5 ? 
+    const moreButton = this.responses.length > favoritesCount ? 
       '<button class="x-inline-response-btn x-more-btn" id="show-all-inline">More...</button>' : '';
     
     const nicknameButton = context.handle ? 

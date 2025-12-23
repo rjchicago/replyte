@@ -1,7 +1,7 @@
 // Background service worker
 chrome.runtime.onInstalled.addListener(async () => {
   // Initialize default data
-  const { responses, users, nicknames } = await chrome.storage.sync.get(['responses', 'users', 'nicknames']);
+  const { responses, users, nicknames, settings } = await chrome.storage.sync.get(['responses', 'users', 'nicknames', 'settings']);
   
   if (!responses) {
     const defaultResponses = [
@@ -39,13 +39,19 @@ chrome.runtime.onInstalled.addListener(async () => {
       await chrome.storage.sync.set({ users: migratedUsers });
     } else {
       await chrome.storage.sync.set({ 
-        users: { 'rjchicago': { nickname: 'RJ', emojis: [] } },
-        settings: {
-          fallbackBehavior: 'displayName',
-          defaultHashtag: ''
-        }
+        users: { 'rjchicago': { nickname: 'RJ', emojis: [] } }
       });
     }
+  }
+  
+  if (!settings) {
+    await chrome.storage.sync.set({ 
+      settings: {
+        favoritesCount: 5,
+        serverUrl: '',
+        accountEmail: ''
+      }
+    });
   }
 });
 
@@ -75,6 +81,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   if (request.type === 'SAVE_USERS') {
     chrome.storage.sync.set({ users: request.users })
+      .then(() => sendResponse({ success: true }));
+    return true;
+  }
+  
+  if (request.type === 'SAVE_SETTINGS') {
+    chrome.storage.sync.set({ settings: request.settings })
       .then(() => sendResponse({ success: true }));
     return true;
   }
