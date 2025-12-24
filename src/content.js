@@ -15,18 +15,34 @@ class XReplyHelper {
   }
 
   async loadData() {
-    const data = await chrome.runtime.sendMessage({ type: 'GET_DATA' });
-    this.responses = data.responses || [];
-    this.users = data.users || {};
-    // Migrate old nicknames format if present
-    if (data.nicknames && !data.users) {
-      this.users = Object.fromEntries(
-        Object.entries(data.nicknames).map(([handle, nickname]) => 
-          [handle, { nickname, emojis: '' }]
-        )
-      );
+    try {
+      if (!chrome.runtime?.id) {
+        console.warn('Extension context invalidated, using fallback data');
+        this.responses = [];
+        this.users = {};
+        this.settings = { favoritesCount: 5, serverUrl: '', accountEmail: '' };
+        return;
+      }
+      
+      const data = await chrome.runtime.sendMessage({ type: 'GET_DATA' });
+      this.responses = data?.responses || [];
+      this.users = data?.users || {};
+      // Migrate old nicknames format if present
+      if (data?.nicknames && !data?.users) {
+        this.users = Object.fromEntries(
+          Object.entries(data.nicknames).map(([handle, nickname]) => 
+            [handle, { nickname, emojis: '' }]
+          )
+        );
+      }
+      this.settings = { favoritesCount: 5, serverUrl: '', accountEmail: '', ...data?.settings };
+    } catch (error) {
+      console.error('Failed to load extension data:', error);
+      // Fallback to empty data
+      this.responses = [];
+      this.users = {};
+      this.settings = { favoritesCount: 5, serverUrl: '', accountEmail: '' };
     }
-    this.settings = { favoritesCount: 5, serverUrl: '', accountEmail: '', ...data.settings };
   }
 
   injectUI() {
@@ -184,10 +200,34 @@ class XReplyHelper {
       delete this.users[handle];
     }
     
-    await chrome.runtime.sendMessage({
-      type: 'SAVE_USERS',
-      users: this.users
-    });
+    try {
+      if (!chrome.runtime?.id) {
+        console.warn('Extension context invalidated, nickname saved locally only');
+        return;
+      }
+      
+      return new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({
+          type: 'SAVE_USERS',
+          users: this.users,
+          changedHandle: handle
+        }, (response) => {
+          if (chrome.runtime.lastError) {
+            if (chrome.runtime.lastError.message?.includes('Extension context invalidated')) {
+              console.warn('Extension reloaded, nickname saved locally only');
+              resolve({ success: true });
+            } else {
+              reject(chrome.runtime.lastError);
+            }
+          } else {
+            resolve(response);
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Failed to save nickname:', error);
+      // Don't throw - just log and continue
+    }
   }
 
   renderResponses(filter = '') {

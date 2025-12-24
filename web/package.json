@@ -13,13 +13,17 @@
     "tailwindcss": "^3.4.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.40.0"
+    "@playwright/test": "^1.40.0",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/jest-dom": "^5.16.5",
+    "jest": "^27.5.1",
+    "jest-environment-jsdom": "^27.5.1"
   },
   "scripts": {
     "start": "node server.js",
     "build": "react-scripts build",
     "dev": "BROWSER=none HOST=0.0.0.0 react-scripts start",
-    "test": "playwright test"
+    "test": "jest --testEnvironment=jsdom --forceExit"
   },
   "browserslist": {
     "production": [

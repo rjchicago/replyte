@@ -9,6 +9,9 @@ docker compose -f docker-compose.ci.yml build
 echo "🔧 Running server tests..."
 docker compose -f docker-compose.ci.yml run --rm server-test
 
+echo "🌐 Running web tests..."
+docker compose -f docker-compose.ci.yml run --rm web-test
+
 echo "🧹 Cleaning up..."
 docker compose -f docker-compose.ci.yml down -v
 

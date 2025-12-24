@@ -12,6 +12,10 @@ class ResponseManager {
     this.setupEventListeners();
     this.render();
     this.loadSettings();
+    this.updateSyncStatus();
+    
+    // Update sync status every 10 seconds
+    setInterval(() => this.updateSyncStatus(), 10000);
   }
 
   async loadData() {
@@ -54,8 +58,8 @@ class ResponseManager {
           settings: this.settings
         });
         
-        // Sync to cloud if user is logged in
-        await this.syncToCloud();
+        // Update sync status after save
+        setTimeout(() => this.updateSyncStatus(), 1000);
       } else {
         // Fallback for testing - just log
         console.log('Data saved (test mode):', { responses: this.responses, users: this.users });
@@ -121,6 +125,106 @@ class ResponseManager {
     return false;
   }
 
+  async updateSyncStatus() {
+    if (typeof chrome === 'undefined' || !chrome.runtime) {
+      return;
+    }
+    
+    try {
+      const status = await new Promise((resolve) => {
+        chrome.runtime.sendMessage({ type: 'GET_SYNC_STATUS' }, resolve);
+      });
+      
+      const statusEl = document.getElementById('sync-status');
+      if (!statusEl) return;
+      
+      if (!this.settings.serverUrl || !this.settings.apiKey) {
+        statusEl.innerHTML = '📱 Local only';
+        statusEl.style.color = '#536471';
+      } else if (status.pending === 0) {
+        statusEl.innerHTML = '✅ Synced';
+        statusEl.style.color = '#16a34a';
+      } else if (status.hasErrors) {
+        statusEl.innerHTML = `❌ ${status.pending} pending (errors)`;
+        statusEl.style.color = '#dc2626';
+      } else {
+        statusEl.innerHTML = `⏳ ${status.pending} pending`;
+        statusEl.style.color = '#f59e0b';
+      }
+      
+      // Update sync log if on that tab
+      if (document.querySelector('[data-tab="sync-log"]').classList.contains('active')) {
+        this.renderSyncLog(status.log);
+      }
+    } catch (error) {
+      console.error('Failed to get sync status:', error);
+    }
+  }
+
+  async renderSyncLog(log = null) {
+    const logList = document.getElementById('sync-log-list');
+    if (!logList) return;
+    
+    let syncLog = log;
+    if (!syncLog && typeof chrome !== 'undefined' && chrome.runtime) {
+      try {
+        const status = await new Promise((resolve) => {
+          chrome.runtime.sendMessage({ type: 'GET_SYNC_STATUS' }, resolve);
+        });
+        syncLog = status.log || [];
+      } catch (error) {
+        console.error('Failed to get sync log:', error);
+        syncLog = [];
+      }
+    }
+    
+    if (!syncLog || syncLog.length === 0) {
+      logList.innerHTML = '<div style="color: #536471; text-align: center; padding: 20px;">No sync activity yet</div>';
+      return;
+    }
+    
+    const sortedLog = [...syncLog].sort((a, b) => b.timestamp - a.timestamp);
+    
+    logList.innerHTML = sortedLog.map(entry => {
+      const time = new Date(entry.timestamp).toLocaleString();
+      const typeColors = {
+        queued: '#f59e0b',
+        success: '#16a34a',
+        error: '#dc2626',
+        failed: '#dc2626'
+      };
+      const typeIcons = {
+        queued: '⏳',
+        success: '✅',
+        error: '⚠️',
+        failed: '❌'
+      };
+      
+      return `
+        <div style="display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #f0f0f0; font-size: 14px;">
+          <span style="color: ${typeColors[entry.type]}; margin-right: 8px;">${typeIcons[entry.type]}</span>
+          <span style="color: #536471; margin-right: 12px; min-width: 140px; font-size: 12px;">${time}</span>
+          <span>${entry.message}</span>
+        </div>
+      `;
+    }).join('');
+  }
+  
+  async clearSyncLog() {
+    if (!confirm('Clear all sync log entries?')) return;
+    
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      try {
+        await new Promise((resolve) => {
+          chrome.runtime.sendMessage({ type: 'CLEAR_SYNC_LOG' }, resolve);
+        });
+        this.renderSyncLog([]);
+      } catch (error) {
+        console.error('Failed to clear sync log:', error);
+      }
+    }
+  }
+
   async getAuthToken() {
     if (typeof chrome !== 'undefined' && chrome.storage) {
       const data = await chrome.storage.local.get(['authToken']);
@@ -163,6 +267,9 @@ class ResponseManager {
     // Settings
     document.getElementById('save-settings').onclick = () => this.saveSettings();
     document.getElementById('test-auth').onclick = () => this.testConnection();
+    
+    // Sync Log
+    document.getElementById('clear-sync-log').onclick = () => this.clearSyncLog();
 
     // Modal close on background click
     document.getElementById('response-modal').onclick = (e) => {
@@ -182,6 +289,7 @@ class ResponseManager {
     this.renderResponses();
     this.renderUsers();
     this.loadSettings();
+    this.renderSyncLog();
   }
 
   renderResponses(filter = '') {
@@ -325,6 +433,22 @@ class ResponseManager {
     
     this.users[handle] = { nickname, emojis };
     await this.saveData();
+    
+    // Queue for sync if credentials exist
+    if (typeof chrome !== 'undefined' && chrome.runtime && this.settings.serverUrl && this.settings.apiKey) {
+      try {
+        await new Promise((resolve) => {
+          chrome.runtime.sendMessage({
+            type: 'SAVE_USERS',
+            users: this.users,
+            changedHandle: handle
+          }, resolve);
+        });
+      } catch (error) {
+        console.error('Failed to queue nickname for sync:', error);
+      }
+    }
+    
     modal.remove();
     this.renderUsers();
   }
@@ -503,6 +627,9 @@ class ResponseManager {
         settings: this.settings
       });
     }
+    
+    // Update sync status after settings change
+    setTimeout(() => this.updateSyncStatus(), 500);
     
     alert('Settings saved!');
   }

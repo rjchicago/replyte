@@ -29,6 +29,9 @@ jobs:
     - name: Run server tests
       run: docker compose -f docker-compose.ci.yml run --rm server-test
     
+    - name: Run web tests
+      run: docker compose -f docker-compose.ci.yml run --rm web-test
+    
     - name: Cleanup
       if: always()
       run: docker compose -f docker-compose.ci.yml down -v

@@ -208,6 +208,7 @@
     <div class="header">
       <h1>Replyte Manager</h1>
       <div class="actions">
+        <div id="sync-status" style="margin-right: 16px; font-size: 14px; color: #536471;"></div>
         <button class="btn btn-primary" id="new-response-btn">New Response</button>
       </div>
     </div>
@@ -216,6 +217,7 @@
       <div class="tab active" data-tab="responses">Responses</div>
       <div class="tab" data-tab="nicknames">Nicknames</div>
       <div class="tab" data-tab="settings">Settings</div>
+      <div class="tab" data-tab="sync-log">Sync Log</div>
     </div>
     
     <div class="tab-content active" id="responses-tab">
@@ -281,6 +283,14 @@
           <button class="btn btn-primary" id="save-settings">Save Settings</button>
         </div>
       </div>
+    </div>
+    
+    <div class="tab-content" id="sync-log-tab">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="margin: 0;">Sync Activity Log</h3>
+        <button class="btn btn-secondary" id="clear-sync-log">Clear Log</button>
+      </div>
+      <div id="sync-log-list" style="max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 12px;"></div>
     </div>
   </div>
   

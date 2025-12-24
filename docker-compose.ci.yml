@@ -34,4 +34,4 @@ services:
     volumes:
       - ./web:/app
       - /app/node_modules
-    command: sh -c "npx playwright install --with-deps chromium && npm test"
+    command: npm test
