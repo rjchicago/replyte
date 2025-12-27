@@ -14,8 +14,8 @@ class ResponseManager {
     this.loadSettings();
     this.updateSyncStatus();
     
-    // Update sync status every 10 seconds
-    setInterval(() => this.updateSyncStatus(), 10000);
+    // Update sync status every 5 seconds for more responsive UI
+    setInterval(() => this.updateSyncStatus(), 5000);
   }
 
   async loadData() {
@@ -52,6 +52,13 @@ class ResponseManager {
   async saveData() {
     try {
       if (typeof chrome !== 'undefined' && chrome.storage) {
+        // Check if extension context is valid
+        if (!chrome.runtime?.id) {
+          console.warn('Extension context invalidated - please reload the extension');
+          alert('Extension needs to be reloaded. Go to chrome://extensions and click the reload button.');
+          return;
+        }
+        
         await chrome.storage.local.set({
           responses: this.responses,
           users: this.users,
@@ -437,16 +444,22 @@ class ResponseManager {
     // Queue for sync if credentials exist
     if (typeof chrome !== 'undefined' && chrome.runtime && this.settings.serverUrl && this.settings.apiKey) {
       try {
+        console.log('Queueing nickname for sync:', { handle, nickname, emojis });
         await new Promise((resolve) => {
           chrome.runtime.sendMessage({
             type: 'SAVE_USERS',
             users: this.users,
             changedHandle: handle
-          }, resolve);
+          }, (response) => {
+            console.log('Sync queue response:', response);
+            resolve(response);
+          });
         });
       } catch (error) {
         console.error('Failed to queue nickname for sync:', error);
       }
+    } else {
+      console.log('Sync not configured - saved locally only');
     }
     
     modal.remove();

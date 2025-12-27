@@ -86,51 +86,61 @@ async function processSyncQueue() {
     return;
   }
   
+  console.log(`Processing sync queue: ${syncQueue.length} items, ${syncQueue.filter(item => Date.now() >= item.nextRetry).length} ready`);
+  
   const now = Date.now();
   const readyItems = syncQueue.filter(item => now >= item.nextRetry);
   
   if (!readyItems.length) return;
   
   for (const item of readyItems) {
+    console.log(`Syncing item ${item.id}:`, item.data);
     try {
       await syncItem(item, settings);
       // Remove successful item
       const updatedQueue = syncQueue.filter(q => q.id !== item.id);
       
       // Add success log
+      const successMessage = `Synced ${item.data.handles?.length || 0} handles successfully`;
+      console.log(`✅ ${successMessage}`);
       syncLog.push({
-        id: Date.now().toString(),
+        id: `${item.id}-success`,
         timestamp: Date.now(),
         type: 'success',
-        message: `Synced ${item.data.handles?.length || 0} handles successfully`
+        message: successMessage
       });
       
       await chrome.storage.local.set({ syncQueue: updatedQueue, syncLog });
     } catch (error) {
+      console.error(`❌ Sync failed for item ${item.id}:`, error);
       // Update retry info
       item.retryCount = (item.retryCount || 0) + 1;
       item.nextRetry = now + Math.min(300000, 5000 * Math.pow(2, item.retryCount)); // Max 5 min
       item.lastError = error.message;
       
       // Add error log
+      const errorMessage = `Sync failed (attempt ${item.retryCount}): ${error.message}`;
       syncLog.push({
-        id: Date.now().toString(),
+        id: `${item.id}-error-${item.retryCount}`,
         timestamp: Date.now(),
         type: 'error',
-        message: `Sync failed (attempt ${item.retryCount}): ${error.message}`
+        message: errorMessage
       });
       
       if (item.retryCount >= 5) {
         // Remove after 5 failures
         const updatedQueue = syncQueue.filter(q => q.id !== item.id);
+        const failedMessage = `Sync permanently failed after 5 attempts`;
+        console.error(`❌ ${failedMessage}`);
         syncLog.push({
-          id: Date.now().toString(),
+          id: `${item.id}-failed`,
           timestamp: Date.now(),
           type: 'failed',
-          message: `Sync permanently failed after 5 attempts`
+          message: failedMessage
         });
         await chrome.storage.local.set({ syncQueue: updatedQueue, syncLog });
       } else {
+        console.log(`⏳ Will retry in ${Math.round((item.nextRetry - now) / 1000)}s`);
         await chrome.storage.local.set({ syncQueue, syncLog });
       }
     }
@@ -144,6 +154,7 @@ async function processSyncQueue() {
 }
 
 async function syncItem(item, settings) {
+  console.log(`Attempting sync to: ${settings.serverUrl}/sync/data`);
   const response = await fetch(`${settings.serverUrl}/sync/data`, {
     method: 'POST',
     headers: {
@@ -154,7 +165,8 @@ async function syncItem(item, settings) {
   });
   
   if (!response.ok) {
-    throw new Error(`${response.status}: ${response.statusText}`);
+    const errorText = await response.text().catch(() => response.statusText);
+    throw new Error(`${response.status}: ${errorText}`);
   }
 }
 
@@ -172,11 +184,13 @@ async function addToSyncQueue(data) {
   syncQueue.push(item);
   
   // Add to sync log
+  const message = `Queued ${data.handles?.length || 0} handles for sync`;
+  console.log(`⏳ ${message}`);
   const logEntry = {
     id: item.id,
     timestamp: Date.now(),
     type: 'queued',
-    message: `Queued ${data.handles?.length || 0} handles for sync`
+    message
   };
   syncLog.push(logEntry);
   
