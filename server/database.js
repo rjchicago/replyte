@@ -106,6 +106,14 @@ class Database {
     await this.db('users').where({ id: userId }).update({ api_key: apiKey });
     return apiKey;
   }
+
+  async logUsage(userId, templateId, xUserHandle) {
+    await this.db('usage_log').insert({
+      user_id: userId,
+      template_id: templateId,
+      x_user_handle: xUserHandle
+    });
+  }
 }
 
 module.exports = Database;

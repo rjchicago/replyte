@@ -442,13 +442,25 @@
 }
 
 .x-inline-response-btn.x-nickname-btn {
-  background: rgba(255, 212, 0, 0.1);
-  color: #ffd400;
-  border: 1px solid rgba(255, 212, 0, 0.3);
+  background: #374151;
+  color: white;
+  border: 1px solid #4b5563;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.x-inline-response-btn.x-nickname-btn:hover {
+  background: #4b5563;
+}
+
+.x-nickname-emojis {
+  margin-left: auto;
 }
 
 .x-inline-nickname {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #e1e8ed;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e1e8ed;
 }

@@ -325,9 +325,26 @@ class XReplyHelper {
     const processedText = this.processTemplate(response.body, context);
     this.insertText(composer, processedText);
     
+    // Log usage
+    this.logUsage(responseId, context.handle);
+    
     // Hide dropdown
     const dropdown = document.getElementById('responses-dropdown');
     if (dropdown) dropdown.style.display = 'none';
+  }
+
+  async logUsage(templateId, xUserHandle) {
+    if (!this.settings?.serverUrl || !this.settings?.apiKey) return;
+    
+    try {
+      const encodedKey = btoa(this.settings.apiKey);
+      const url = `${this.settings.serverUrl}/sync/usage?key=${encodeURIComponent(encodedKey)}&templateId=${encodeURIComponent(templateId)}&xUserHandle=${encodeURIComponent(xUserHandle || '')}`;
+      // Use image request to avoid CORS
+      const img = new Image();
+      img.src = url;
+    } catch (error) {
+      console.log('Usage logging failed:', error);
+    }
   }
 
   getCurrentTweetContext() {
@@ -468,23 +485,49 @@ class XReplyHelper {
       '<button class="x-inline-response-btn x-more-btn" id="show-all-inline">More...</button>' : '';
     
     const nicknameButton = context.handle ? 
-      `<button class="x-inline-response-btn x-nickname-btn" data-handle="${context.handle}">${context.nickname || context.handle}</button>` : '';
+      `<button class="x-inline-response-btn x-nickname-btn" data-handle="${context.handle}">
+        <span>${context.nickname || context.handle}</span>
+        ${context.handle && this.users[context.handle]?.emojis ? `<span class="x-nickname-emojis">${this.users[context.handle].emojis}</span>` : ''}
+      </button>` : '';
     
     modal.innerHTML = `
       <div class="x-inline-responses">
+        ${nicknameButton ? `<div class="x-inline-nickname">${nicknameButton}</div>` : ''}
         ${favoriteButtons}
         ${moreButton}
       </div>
-      ${nicknameButton ? `<div class="x-inline-nickname">${nicknameButton}</div>` : ''}
     `;
     
     const triggerRect = triggerBtn.getBoundingClientRect();
     modal.style.position = 'fixed';
-    modal.style.top = `${triggerRect.bottom + 5}px`;
-    modal.style.right = `${window.innerWidth - triggerRect.right}px`;
     modal.style.zIndex = '10000';
     
     document.body.appendChild(modal);
+    
+    // Smart positioning - check if modal fits below, otherwise place above
+    const modalRect = modal.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - triggerRect.bottom;
+    const spaceAbove = triggerRect.top;
+    
+    if (spaceBelow >= modalRect.height + 10) {
+      // Place below
+      modal.style.top = `${triggerRect.bottom + 5}px`;
+    } else if (spaceAbove >= modalRect.height + 10) {
+      // Place above
+      modal.style.top = `${triggerRect.top - modalRect.height - 5}px`;
+    } else {
+      // Center vertically if neither fits well
+      modal.style.top = `${Math.max(10, (viewportHeight - modalRect.height) / 2)}px`;
+    }
+    
+    // Horizontal positioning - prefer right-aligned but adjust if needed
+    const spaceRight = window.innerWidth - triggerRect.right;
+    if (spaceRight >= modalRect.width) {
+      modal.style.right = `${window.innerWidth - triggerRect.right}px`;
+    } else {
+      modal.style.left = `${Math.max(10, triggerRect.left - modalRect.width + triggerRect.width)}px`;
+    }
     
     modal.querySelectorAll('.x-inline-response-btn[data-id]').forEach(btn => {
       btn.onclick = (e) => {
