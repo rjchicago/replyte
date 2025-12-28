@@ -37,7 +37,13 @@ class XReplyHelper {
       }
       this.settings = { favoritesCount: 5, serverUrl: '', accountEmail: '', ...data?.settings };
     } catch (error) {
-      console.error('Failed to load extension data:', error);
+      if (error.message?.includes('Extension context invalidated')) {
+        console.warn('Extension reloaded, please refresh the page');
+        // Show user notification
+        this.showReloadNotification();
+      } else {
+        console.error('Failed to load extension data:', error);
+      }
       // Fallback to empty data
       this.responses = [];
       this.users = {};
@@ -427,6 +433,18 @@ class XReplyHelper {
 
   filterResponses(query) {
     this.renderResponses(query);
+  }
+
+  showReloadNotification() {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed; top: 20px; right: 20px; z-index: 10000;
+      background: #1d9bf0; color: white; padding: 12px 16px;
+      border-radius: 8px; font-size: 14px; max-width: 300px;
+    `;
+    notification.textContent = 'Replyte extension updated. Please refresh the page.';
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 5000);
   }
 
   setupUserInteraction() {
