@@ -114,5 +114,60 @@ module.exports = (db) => {
     res.json(updated);
   });
 
+  // Usage reports
+  router.get('/usage/report', auth.requireAuth, async (req, res) => {
+    const { days = 7, groupBy = 'both' } = req.query;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days));
+    
+    try {
+      let query = db.db('usage_log')
+        .where('usage_log.user_id', req.user.id)
+        .where('usage_log.created_at', '>=', startDate);
+      
+      if (groupBy === 'nickname') {
+        const results = await query
+          .leftJoin('handles', function() {
+            this.on('usage_log.x_user_handle', '=', 'handles.handle')
+                .andOn('handles.user_id', '=', 'usage_log.user_id');
+          })
+          .select(
+            db.db.raw('COALESCE(handles.nickname, usage_log.x_user_handle) as name'),
+            'usage_log.x_user_handle as handle',
+            db.db.raw('COUNT(*) as count')
+          )
+          .groupBy('handles.nickname', 'usage_log.x_user_handle')
+          .orderBy('count', 'desc');
+        res.json(results);
+      } else if (groupBy === 'template') {
+        const results = await query
+          .join('templates', 'usage_log.template_id', 'templates.id')
+          .select('templates.name as name', db.db.raw('COUNT(*) as count'))
+          .groupBy('templates.id', 'templates.name')
+          .orderBy('count', 'desc');
+        res.json(results);
+      } else {
+        const results = await query
+          .leftJoin('handles', function() {
+            this.on('usage_log.x_user_handle', '=', 'handles.handle')
+                .andOn('handles.user_id', '=', 'usage_log.user_id');
+          })
+          .join('templates', 'usage_log.template_id', 'templates.id')
+          .select(
+            db.db.raw('COALESCE(handles.nickname, usage_log.x_user_handle) as nickname'),
+            'usage_log.x_user_handle as handle',
+            'templates.name as template',
+            db.db.raw('COUNT(*) as count')
+          )
+          .groupBy('handles.nickname', 'usage_log.x_user_handle', 'templates.id', 'templates.name')
+          .orderBy('count', 'desc');
+        res.json(results);
+      }
+    } catch (error) {
+      console.error('Usage report error:', error);
+      res.status(500).json({ error: 'Failed to generate usage report' });
+    }
+  });
+
   return router;
 };
