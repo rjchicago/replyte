@@ -286,6 +286,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   
+  if (request.type === 'LOG_USAGE') {
+    chrome.storage.local.get(['settings'])
+      .then(async (data) => {
+        const settings = data.settings;
+        if (settings?.serverUrl && settings?.apiKey) {
+          try {
+            await fetch(`${settings.serverUrl}/sync/usage`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': settings.apiKey
+              },
+              body: JSON.stringify({
+                templateId: request.templateId,
+                xUserHandle: request.xUserHandle
+              })
+            });
+          } catch (error) {
+            console.log('Usage logging failed:', error);
+          }
+        }
+      });
+    return true;
+  }
+  
   // Legacy support
   if (request.type === 'SAVE_NICKNAMES') {
     const users = Object.fromEntries(

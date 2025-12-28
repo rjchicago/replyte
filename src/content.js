@@ -334,14 +334,14 @@ class XReplyHelper {
   }
 
   async logUsage(templateId, xUserHandle) {
-    if (!this.settings?.serverUrl || !this.settings?.apiKey) return;
-    
     try {
-      const encodedKey = btoa(this.settings.apiKey);
-      const url = `${this.settings.serverUrl}/sync/usage?key=${encodeURIComponent(encodedKey)}&templateId=${encodeURIComponent(templateId)}&xUserHandle=${encodeURIComponent(xUserHandle || '')}`;
-      // Use image request to avoid CORS
-      const img = new Image();
-      img.src = url;
+      if (!chrome.runtime?.id) return;
+      
+      chrome.runtime.sendMessage({
+        type: 'LOG_USAGE',
+        templateId,
+        xUserHandle
+      });
     } catch (error) {
       console.log('Usage logging failed:', error);
     }
