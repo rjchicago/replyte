@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
+async function apiFetch(url, opts = {}) {
+  const res = await fetch(url, { ...opts, credentials: "include" });
+
+  if (res.status === 401) {
+    const here = window.location.href;
+    const tinyauthUrl = window.location.origin.replace(/^https?:\/\/[^.]+/, 'https://tinyauth');
+    window.location.assign(`${tinyauthUrl}/login?redirect_uri=${encodeURIComponent(here)}`);
+    return; // stop normal handling
+  }
+
+  return res;
+}
+
 const PencilIcon = ({ className }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -119,15 +132,13 @@ function App() {
 
   const loadUser = async () => {
     try {
-      const res = await fetch('/api/user/info', {
-        credentials: 'include'
-      });
-      if (res.ok) {
+      const res = await apiFetch('/api/user/info');
+      if (res?.ok) {
         const userData = await res.json();
         setUser(userData);
         setUserName(userData?.name || userData?.email);
         setApiKey(userData?.apiKey);
-      } else {
+      } else if (res) {
         console.error('API error:', res.status, res.statusText);
       }
     } catch (error) {
